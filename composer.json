@@ -1,0 +1,25 @@
+{
+  "name": "rleroi/debrid",
+  "description": "Multiple Debrid providers in 1 PHP package",
+  "type": "library",
+  "license": "MIT",
+  "php": "^8.0",
+  "autoload": {
+    "psr-4": {
+      "RLeroi\\Debrid\\": "src/",
+      "RLeroi\\Debrid\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "stan": "phpstan analyse"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.5",
+    "phpstan/phpstan": "^2.1",
+    "mockery/mockery": "^1.6"
+  },
+  "require": {
+    "guzzlehttp/guzzle": "^7.9"
+  }
+}
