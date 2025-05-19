@@ -15,7 +15,7 @@ final class TorBoxClient implements ClientStrategy
 {
     private const BASE_URL = 'https://api.torbox.app/v1/api/';
 
-    public function __construct(?string $token, private ?ClientInterface $http = null)
+    public function __construct(private ?string $token, private ?ClientInterface $http = null)
     {
         $this->http ??= new Client();
     }

@@ -12,7 +12,7 @@ use RLeroi\Debrid\Exceptions\DebridException;
 
 final class RealDebridClientTest extends TestCase
 {
-    public function testItThrowsOngetCachedFileNames(): void
+    public function testItThrowsOnGetCachedFileNames(): void
     {
         $mock = Mockery::mock(Client::class);;
         $client = new RealDebridClient('test-token', $mock);
