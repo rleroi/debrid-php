@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace RLeroi\Debrid;
 
 use InvalidArgumentException;
+use RLeroi\Debrid\Clients\AllDebridClient;
 use RLeroi\Debrid\Clients\ClientStrategy;
+use RLeroi\Debrid\Clients\DebridLinkClient;
 use RLeroi\Debrid\Clients\PremiumizeClient;
 use RLeroi\Debrid\Clients\RealDebridClient;
 use RLeroi\Debrid\Clients\TorBoxClient;
@@ -45,6 +47,28 @@ final class Client
         }
 
         $this->client = new TorBoxClient($this->token);
+
+        return $this;
+    }
+
+    public function setClientAllDebrid(?string $token = null): self
+    {
+        if ($token) {
+            $this->setToken($token);
+        }
+
+        $this->client = new AllDebridClient($this->token);
+
+        return $this;
+    }
+
+    public function setClientDebridLink(?string $token = null): self
+    {
+        if ($token) {
+            $this->setToken($token);
+        }
+
+        $this->client = new DebridLinkClient($this->token);
 
         return $this;
     }

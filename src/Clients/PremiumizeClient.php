@@ -54,8 +54,9 @@ final class PremiumizeClient implements ClientStrategy
 
         $data = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
 
-        if (!$data || $data['status'] === 'error') {
-            throw new DebridException($data['message']);
+        if (!$data || (isset($data['status']) && $data['status'] === 'error')) {
+            $message = $data['message'] ?? 'Unknown API error';
+            throw new DebridException($message);
         }
 
         return $data;
@@ -68,7 +69,7 @@ final class PremiumizeClient implements ClientStrategy
      */
     private function isMagnetCached(string $magnet): bool
     {
-        return (bool)$this->request(
+        $response = $this->request(
             'GET',
             'cache/check',
             [
@@ -77,7 +78,10 @@ final class PremiumizeClient implements ClientStrategy
                     'apikey' => $this->token,
                 ],
             ],
-        )['response'][0];
+        );
+
+        // According to API docs, response is an array where each item is true if cached
+        return isset($response['response'][0]) && $response['response'][0] === true;
     }
 
     /**
@@ -91,15 +95,21 @@ final class PremiumizeClient implements ClientStrategy
             return [];
         }
 
-        return $this->filesCache[$magnet] ?? $this->request(
-            'POST',
-            'transfer/directdl',
-            [
-                'form_params' => [
-                    'src' => $magnet,
-                ],
+        if (isset($this->filesCache[$magnet])) {
+            return $this->filesCache[$magnet];
+        }
+
+        // Use the correct endpoint for getting file list
+        $response = $this->request('POST', 'transfer/directdl', [
+            'form_params' => [
+                'src' => $magnet,
             ],
-        )['content'] ?? [];
+        ]);
+
+        $files = $response['content'] ?? [];
+        $this->filesCache[$magnet] = $files;
+
+        return $files;
     }
 
     /**
@@ -110,8 +120,8 @@ final class PremiumizeClient implements ClientStrategy
     public function getCachedFiles(string $magnet): array
     {
         return array_map(fn(array $file): array => [
-            'path' => $file['path'],
-            'size' => $file['size'],
+            'path' => $file['path'] ?? '',
+            'size' => $file['size'] ?? 0,
         ], $this->getFiles($magnet));
     }
 
@@ -150,16 +160,28 @@ final class PremiumizeClient implements ClientStrategy
     {
         unset($this->filesCache[$magnet]);
 
-        return $this->request('POST', 'transfer/create', [
+        $response = $this->request('POST', 'transfer/create', [
             'form_params' => [
                 'src' => $magnet,
             ],
-        ])['id'] ?? throw new DebridException('Magnet cannot be added');
+        ]);
+
+        if (!isset($response['id'])) {
+            throw new DebridException('Failed to add magnet: No transfer ID returned');
+        }
+
+        return $response['id'];
     }
 
-    public function getTorrents(): array
-    {
-        //todo
-        return [];
-    }
+    /**
+     * @throws GuzzleException
+     * @throws JsonException
+     * @throws DebridException
+     */
+    // public function getTorrents(): array
+    // {
+    //     $response = $this->request('GET', 'transfer/list');
+        
+    //     return $response['transfers'] ?? [];
+    // }
 }

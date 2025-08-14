@@ -11,9 +11,9 @@ use InvalidArgumentException;
 use JsonException;
 use RLeroi\Debrid\Exceptions\DebridException;
 
-final class TorBoxClient implements ClientStrategy
+final class DebridLinkClient implements ClientStrategy
 {
-    private const BASE_URL = 'https://api.torbox.app/v1/api/';
+    private const BASE_URL = 'https://api.debrid-link.com/v2/';
 
     public function __construct(private ?string $token, private ?ClientInterface $http = null)
     {
@@ -50,8 +50,10 @@ final class TorBoxClient implements ClientStrategy
         $body = $response->getBody()->getContents();
 
         $data = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
-        if (!$data || !$data['success']) {
-            throw new DebridException($data['detail'] ?? 'unknown error');
+        
+        // Check for API errors
+        if (isset($data['error'])) {
+            throw new DebridException($data['error']);
         }
 
         return $data;
@@ -134,7 +136,7 @@ final class TorBoxClient implements ClientStrategy
     {
         $response = $this->request(
             'POST',
-            'torrents/createtorrent',
+            'torrents/add',
             [
                 'form_params' => [
                     'magnet' => $magnet,
@@ -165,18 +167,16 @@ final class TorBoxClient implements ClientStrategy
         try {
             $response = $this->request(
                 'GET',
-                'torrents/checkcached',
+                'torrents/check',
                 [
                     'query' => [
-                        'hash' => [$infoHash],
-                        'format' => 'list',
-                        'list_files' => 'true',
+                        'hash' => $infoHash,
                     ],
                 ],
             );
 
-            if (isset($response['data'][$infoHash]['files'])) {
-                return $response['data'][$infoHash]['files'];
+            if (isset($response['data']['files'])) {
+                return $response['data']['files'];
             }
 
             return [];
@@ -184,15 +184,6 @@ final class TorBoxClient implements ClientStrategy
             // If torrent is not cached, return empty array
             return [];
         }
-    }
-
-    /**
-     * Get torrent information
-     */
-    private function getTorrentInfo(string $torrentId): array
-    {
-        $response = $this->request('GET', "torrents/info/{$torrentId}");
-        return $response['data'] ?? [];
     }
 
     /**
