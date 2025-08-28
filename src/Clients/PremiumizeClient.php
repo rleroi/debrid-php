@@ -7,19 +7,22 @@ namespace RLeroi\Debrid\Clients;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
-use InvalidArgumentException;
 use JsonException;
+use RLeroi\Debrid\DTOs\DebridFile;
 use RLeroi\Debrid\Exceptions\DebridException;
+use RLeroi\Debrid\Mappers\PremiumizeMapper;
+use RuntimeException;
 
 final class PremiumizeClient implements ClientStrategy
 {
     private const BASE_URL = 'https://www.premiumize.me/api/';
 
-    private array $filesCache = [];
+    private PremiumizeMapper $mapper;
 
     public function __construct(private ?string $token, private ?ClientInterface $http = null)
     {
         $this->http ??= new Client();
+        $this->mapper = new PremiumizeMapper();
     }
 
     public function setToken(string $token): void
@@ -35,10 +38,10 @@ final class PremiumizeClient implements ClientStrategy
     private function request(string $method, string $uri, array $options = []): array
     {
         if (!$this->token) {
-            throw new InvalidArgumentException('You must set the token before calling this method');
+            throw new RuntimeException('You must set the token before calling this method');
         }
 
-        $mergedOptions = array_merge([
+        $mergedOptions = array_merge_recursive([
             'base_uri' => self::BASE_URL,
             'headers' => [
                 'Accept' => 'application/json',
@@ -49,9 +52,7 @@ final class PremiumizeClient implements ClientStrategy
         ], $options);
 
         $response = $this->http->request($method, $uri, $mergedOptions);
-
         $body = $response->getBody()->getContents();
-
         $data = json_decode($body, true, flags: JSON_THROW_ON_ERROR);
 
         if (!$data || (isset($data['status']) && $data['status'] === 'error')) {
@@ -63,66 +64,20 @@ final class PremiumizeClient implements ClientStrategy
     }
 
     /**
-     * @throws DebridException
-     * @throws GuzzleException
-     * @throws JsonException
-     */
-    private function isMagnetCached(string $magnet): bool
-    {
-        $response = $this->request(
-            'GET',
-            'cache/check',
-            [
-                'query' => [
-                    'items[]' => $magnet,
-                    'apikey' => $this->token,
-                ],
-            ],
-        );
-
-        // According to API docs, response is an array where each item is true if cached
-        return isset($response['response'][0]) && $response['response'][0] === true;
-    }
-
-    /**
-     * @throws GuzzleException
-     * @throws JsonException
-     * @throws DebridException
-     */
-    private function getFiles(string $magnet): array
-    {
-        if (!$this->isMagnetCached($magnet)) {
-            return [];
-        }
-
-        if (isset($this->filesCache[$magnet])) {
-            return $this->filesCache[$magnet];
-        }
-
-        // Use the correct endpoint for getting file list
-        $response = $this->request('POST', 'transfer/directdl', [
-            'form_params' => [
-                'src' => $magnet,
-            ],
-        ]);
-
-        $files = $response['content'] ?? [];
-        $this->filesCache[$magnet] = $files;
-
-        return $files;
-    }
-
-    /**
+     * @return DebridFile[]
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
      */
     public function getCachedFiles(string $magnet): array
     {
-        return array_map(fn(array $file): array => [
-            'path' => $file['path'] ?? '',
-            'size' => $file['size'] ?? 0,
-        ], $this->getFiles($magnet));
+        $response = $this->request('POST', 'transfer/directdl', [
+            'form_params' => [
+                'src' => $magnet,
+            ],
+        ]);
+
+        return $this->mapper->mapFiles($response);
     }
 
     /**
@@ -132,7 +87,14 @@ final class PremiumizeClient implements ClientStrategy
      */
     public function isFileCached(string $magnet, string $path): bool
     {
-        return (bool)$this->getLink($magnet, $path);
+        $files = $this->getCachedFiles($magnet);
+        foreach ($files as $file) {
+            if ($file->path === $path) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -142,13 +104,14 @@ final class PremiumizeClient implements ClientStrategy
      */
     public function getLink(string $magnet, string $path): string
     {
-        foreach ($this->getFiles($magnet) as $file) {
-            if (isset($file['path']) && $file['path'] === $path) {
-                return $file['stream_link'] ?? $file['link'] ?? '';
+        $files = $this->getCachedFiles($magnet);
+        foreach ($files as $file) {
+            if ($file->path === $path) {
+                return $file->data['stream_link'] ?? $file->data['link'];
             }
         }
 
-        return '';
+        throw new DebridException('File not cached');
     }
 
     /**
@@ -158,8 +121,6 @@ final class PremiumizeClient implements ClientStrategy
      */
     public function addMagnet(string $magnet): string
     {
-        unset($this->filesCache[$magnet]);
-
         $response = $this->request('POST', 'transfer/create', [
             'form_params' => [
                 'src' => $magnet,
@@ -167,10 +128,10 @@ final class PremiumizeClient implements ClientStrategy
         ]);
 
         if (!isset($response['id'])) {
-            throw new DebridException('Failed to add magnet: No transfer ID returned');
+            throw new DebridException('Failed to add magnet');
         }
 
-        return $response['id'];
+        return (string)$response['id'];
     }
 
     /**
@@ -178,10 +139,19 @@ final class PremiumizeClient implements ClientStrategy
      * @throws JsonException
      * @throws DebridException
      */
-    // public function getTorrents(): array
-    // {
-    //     $response = $this->request('GET', 'transfer/list');
-        
-    //     return $response['transfers'] ?? [];
-    // }
+    private function isMagnetCached(string $magnet): bool
+    {
+        $response = $this->request(
+            'GET',
+            'cache/check',
+            [
+                'query' => [
+                    'items[]' => $magnet,
+                ],
+            ],
+        );
+
+        return isset($response['response']) && $response['response'][0];
+    }
+
 }

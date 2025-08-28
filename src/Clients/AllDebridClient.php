@@ -7,18 +7,20 @@ namespace RLeroi\Debrid\Clients;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
-use JsonException;
-use RLeroi\Debrid\Exceptions\DebridException;
 use InvalidArgumentException;
+use JsonException;
+use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Exceptions\DebridException;
+use RLeroi\Debrid\Mappers\AllDebridMapper;
+use RuntimeException;
 
 final class AllDebridClient implements ClientStrategy
 {
-    private const API_BASE_URL = 'https://api.alldebrid.com/v4';
-    private const RATE_LIMIT_PER_SECOND = 12;
-    private const RATE_LIMIT_PER_MINUTE = 600;
+    private const API_BASE_URL = 'https://api.alldebrid.com';
 
     private ?string $token = null;
     private ClientInterface $httpClient;
+    private AllDebridMapper $mapper;
 
     public function __construct(?string $token = null, ?ClientInterface $httpClient = null)
     {
@@ -26,10 +28,11 @@ final class AllDebridClient implements ClientStrategy
             'base_uri' => self::API_BASE_URL,
             'timeout' => 30,
             'headers' => [
-                'User-Agent' => 'Debrid-Library/1.0',
                 'Accept' => 'application/json',
             ],
         ]);
+
+        $this->mapper = new AllDebridMapper();
 
         if ($token !== null) {
             $this->setToken($token);
@@ -46,50 +49,28 @@ final class AllDebridClient implements ClientStrategy
     }
 
     /**
+     * @return DebridFile[]
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
      */
     public function getCachedFiles(string $magnet): array
     {
-        // Step 1: Upload magnet (if not already uploaded)
-        $magnetId = $this->addMagnet($magnet);
-        
-        // Step 2: Get magnet status and files
-        $magnetInfo = $this->request('GET', 'magnet/status', [
-            'query' => ['id' => $magnetId],
+        $hash = $this->extractHashFromMagnet($magnet);
+        $existingMagnetId = $this->findExistingMagnetByHash($hash);
+
+        if ($existingMagnetId === null) {
+            return [];
+        }
+        $response = $this->request('GET', '/v4.1/magnet/status', [
+            'query' => ['id' => $existingMagnetId],
         ]);
 
-        if (!isset($magnetInfo['data']['magnets'][0])) {
-            throw new DebridException('Magnet not found or invalid response');
-        }
-
-        $magnetData = $magnetInfo['data']['magnets'][0];
-        
-        // Step 3: Check if magnet is ready
-        $status = $magnetData['status'] ?? '';
-        if ($status !== 'Ready') {
-            throw new DebridException("Magnet is not ready. Current status: {$status}");
-        }
-
-        // Step 4: Get files and links
-        $filesInfo = $this->request('GET', 'magnet/links', [
-            'query' => ['id' => $magnetId],
-        ]);
-
-        if (!isset($filesInfo['data']['magnets'][0]['files'])) {
+        if (!isset($response['data']['magnets']['files'])) {
             return [];
         }
 
-        // Step 5: Return the list of file paths
-        $filePaths = [];
-        foreach ($filesInfo['data']['magnets'][0]['files'] as $file) {
-            if (isset($file['n'])) { // 'n' is the filename
-                $filePaths[] = $file['n'];
-            }
-        }
-
-        return $filePaths;
+        return $this->mapper->mapFiles($response);
     }
 
     /**
@@ -101,7 +82,13 @@ final class AllDebridClient implements ClientStrategy
     {
         // Get all cached files and check if the specific path exists
         $cachedFiles = $this->getCachedFiles($magnet);
-        return in_array($path, $cachedFiles, true);
+        foreach ($cachedFiles as $file) {
+            if ($file->path === ltrim($path, '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -111,54 +98,39 @@ final class AllDebridClient implements ClientStrategy
      */
     public function getLink(string $magnet, string $path): string
     {
-        // Step 1: Upload magnet (if not already uploaded)
-        $magnetId = $this->addMagnet($magnet);
-        
-        // Step 2: Get magnet status
-        $magnetInfo = $this->request('GET', 'magnet/status', [
-            'query' => ['id' => $magnetId],
-        ]);
-
-        if (!isset($magnetInfo['data']['magnets'][0])) {
-            throw new DebridException('Magnet not found or invalid response');
-        }
-
-        $magnetData = $magnetInfo['data']['magnets'][0];
-        
-        // Step 3: Check if magnet is ready
-        $status = $magnetData['status'] ?? '';
-        if ($status !== 'Ready') {
-            throw new DebridException("Magnet is not ready. Current status: {$status}");
-        }
-
-        // Step 4: Get files and links
-        $filesInfo = $this->request('GET', 'magnet/links', [
-            'query' => ['id' => $magnetId],
-        ]);
-
-        if (!isset($filesInfo['data']['magnets'][0]['files'])) {
-            throw new DebridException('No files found in magnet');
-        }
-
-        // Step 5: Find the file that matches the requested path
-        $targetFile = null;
-        foreach ($filesInfo['data']['magnets'][0]['files'] as $file) {
-            if (isset($file['n']) && $file['n'] === $path) {
-                $targetFile = $file;
-                break;
+        $files = $this->getCachedFiles($magnet);
+        // Find the file that matches the requested path
+        foreach ($files as $file) {
+            if ($file->path === $path) {
+                if ($file->data['l'] ?? null) {
+                    return $this->unrestrictLink($file->data['l']);
+                }
+                throw new DebridException('No download link available for the specified file');
             }
         }
 
-        if ($targetFile === null) {
-            throw new DebridException("File with path '{$path}' not found in magnet");
+        throw new DebridException("File with path '{$path}' not found in magnet");
+    }
+
+    /**
+     * Unrestrict a AllDebrid link to get the final download URL
+     * @throws GuzzleException
+     * @throws JsonException
+     * @throws DebridException
+     */
+    private function unrestrictLink(string $link): string
+    {
+        $response = $this->request('POST', '/v4/link/unlock', [
+            'form_params' => [
+                'link' => $link,
+            ],
+        ]);
+
+        if (!isset($response['data']['link'])) {
+            throw new DebridException('Failed to unrestrict AllDebrid link');
         }
 
-        // Step 6: Return the download link
-        if (!isset($targetFile['link'])) {
-            throw new DebridException('No download link available for the specified file');
-        }
-
-        return $targetFile['link'];
+        return $response['data']['link'];
     }
 
     /**
@@ -170,15 +142,15 @@ final class AllDebridClient implements ClientStrategy
     {
         // Extract hash from magnet link for duplicate prevention
         $hash = $this->extractHashFromMagnet($magnet);
-        
+
         // Check if magnet is already uploaded
         $existingMagnetId = $this->findExistingMagnetByHash($hash);
         if ($existingMagnetId !== null) {
             return $existingMagnetId;
         }
 
-        // Upload new magnet
-        $response = $this->request('POST', 'magnet/upload', [
+        // Upload new magnet using form-encoded data (not JSON)
+        $response = $this->request('POST', '/v4/magnet/upload', [
             'form_params' => [
                 'magnets[]' => $magnet,
             ],
@@ -188,12 +160,12 @@ final class AllDebridClient implements ClientStrategy
             throw new DebridException('Failed to upload magnet: No magnet ID returned');
         }
 
-        return $response['data']['magnets'][0]['id'];
+        return (string)$response['data']['magnets'][0]['id'];
     }
 
     /**
      * Make HTTP request to AllDebrid API
-     * 
+     *
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
@@ -201,12 +173,13 @@ final class AllDebridClient implements ClientStrategy
     private function request(string $method, string $uri, array $options = []): array
     {
         if ($this->token === null) {
-            throw new InvalidArgumentException('You must set the token before calling this method');
+            throw new RuntimeException('You must set the token before calling this method');
         }
 
-        // Add authentication header
-        $options['headers'] = array_merge($options['headers'] ?? [], [
-            'Authorization' => "Bearer {$this->token}",
+        // Add authentication as query parameter (AllDebrid uses apikey, not Bearer token)
+        $options['query'] = array_merge($options['query'] ?? [], [
+            'agent' => 'debridlib',
+            'apikey' => $this->token,
         ]);
 
         $response = $this->httpClient->request($method, $uri, $options);
@@ -228,7 +201,34 @@ final class AllDebridClient implements ClientStrategy
         if ($data['status'] === 'error') {
             $errorCode = $data['error']['code'] ?? 'UNKNOWN';
             $errorMessage = $data['error']['message'] ?? 'Unknown error';
-            throw new DebridException("API Error ({$errorCode}): {$errorMessage}");
+
+            // Throw specific exceptions based on error code
+            switch ($errorCode) {
+                case 'AUTH_BAD_APIKEY':
+                case 'AUTH_MISSING_APIKEY':
+                case 'AUTH_USER_BANNED':
+                    throw new DebridException("Authentication failed ({$errorCode}): {$errorMessage}");
+
+                case 'LINK_PASS_PROTECTED':
+                case 'LINK_NOT_SUPPORTED':
+                case 'LINK_HOST_NOT_SUPPORTED':
+                    throw new DebridException("Link not supported ({$errorCode}): {$errorMessage}");
+
+                case 'MAGNET_INVALID':
+                case 'MAGNET_TOO_MANY_FILES':
+                    throw new DebridException("Invalid magnet ({$errorCode}): {$errorMessage}");
+
+                case 'MAGNET_NO_SERVER':
+                case 'MAGNET_PROCESSING':
+                    throw new DebridException("Torrent not ready ({$errorCode}): {$errorMessage}");
+
+                case 'USER_LINK_INVALID':
+                case 'LINK_ERROR':
+                    throw new DebridException("File error ({$errorCode}): {$errorMessage}");
+
+                default:
+                    throw new DebridException("API Error ({$errorCode}): {$errorMessage}");
+            }
         }
 
         return $data;
@@ -236,13 +236,14 @@ final class AllDebridClient implements ClientStrategy
 
     /**
      * Extract hash from magnet link
+     * @throws DebridException
      */
     private function extractHashFromMagnet(string $magnet): string
     {
         if (preg_match('/urn:btih:([a-fA-F0-9]{40})/', $magnet, $matches)) {
             return strtolower($matches[1]);
         }
-        
+
         throw new DebridException('Invalid magnet link: Could not extract hash');
     }
 
@@ -251,24 +252,19 @@ final class AllDebridClient implements ClientStrategy
      */
     private function findExistingMagnetByHash(string $hash): ?string
     {
-        try {
-            // Get all magnets and check for existing one with same hash
-            $magnets = $this->request('GET', 'magnet/status');
-            
-            if (!isset($magnets['data']['magnets'])) {
-                return null;
-            }
+        // Get all magnets and check for existing one with same hash
+        $magnets = $this->request('GET', '/v4.1/magnet/status');
 
-            foreach ($magnets['data']['magnets'] as $magnet) {
-                if (isset($magnet['hash']) && strtolower($magnet['hash']) === $hash) {
-                    return $magnet['id'];
-                }
-            }
-            
-            return null;
-        } catch (Exception $e) {
-            // If we can't get the magnet list, assume it doesn't exist
+        if (!isset($magnets['data']['magnets'])) {
             return null;
         }
+
+        foreach ($magnets['data']['magnets'] as $magnet) {
+            if (isset($magnet['hash']) && strtolower($magnet['hash']) === $hash) {
+                return (string)$magnet['id'];
+            }
+        }
+
+        return null;
     }
 }

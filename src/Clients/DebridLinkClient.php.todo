@@ -9,7 +9,10 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use InvalidArgumentException;
 use JsonException;
+use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\DTOs\DebridTorrent;
 use RLeroi\Debrid\Exceptions\DebridException;
+use RLeroi\Debrid\Mappers\DebridLinkMapper;
 
 final class DebridLinkClient implements ClientStrategy
 {
@@ -18,6 +21,7 @@ final class DebridLinkClient implements ClientStrategy
     public function __construct(private ?string $token, private ?ClientInterface $http = null)
     {
         $this->http ??= new Client();
+        $this->mapper = new DebridLinkMapper();
     }
 
     public function setToken(string $token): void
@@ -60,6 +64,7 @@ final class DebridLinkClient implements ClientStrategy
     }
 
     /**
+     * @return DebridFile[]
      * @throws GuzzleException|JsonException|DebridException
      */
     public function getCachedFiles(string $magnet): array
@@ -75,15 +80,8 @@ final class DebridLinkClient implements ClientStrategy
             return [];
         }
 
-        // Step 3: Return file paths from cached info
-        $filePaths = [];
-        foreach ($cachedInfo as $file) {
-            if (isset($file['path'])) {
-                $filePaths[] = $file['path'];
-            }
-        }
-        
-        return $filePaths;
+        // Step 3: Return DebridFile objects from cached info
+        return $this->mapper->mapFiles(['data' => ['files' => $cachedInfo]]);
     }
 
     /**
@@ -93,7 +91,12 @@ final class DebridLinkClient implements ClientStrategy
     {
         // Get all cached files and check if the specific path exists
         $cachedFiles = $this->getCachedFiles($magnet);
-        return in_array($path, $cachedFiles, true);
+        foreach ($cachedFiles as $file) {
+            if ($file->path === $path) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -203,5 +206,54 @@ final class DebridLinkClient implements ClientStrategy
         );
 
         return $response['data']['download_link'] ?? throw new DebridException('Failed to get download link');
+    }
+
+    /**
+     * @throws GuzzleException|JsonException|DebridException
+     */
+    public function getTorrent(string $magnet): ?DebridTorrent
+    {
+        // Extract hash from magnet link
+        $infoHash = $this->extractHashFromMagnet($magnet);
+
+        // Check if torrent is already cached
+        $cachedInfo = $this->checkCachedTorrent($infoHash);
+        
+        if (empty($cachedInfo)) {
+            return null;
+        }
+
+        return $this->mapper->mapTorrent($magnet, ['data' => ['files' => $cachedInfo]]);
+    }
+
+    /**
+     * Find a file by filename (case-insensitive) across different path structures
+     * 
+     * @param string $magnet The magnet link
+     * @param string $filename The filename to search for
+     * @return DebridFile|null The file if found, null otherwise
+     * @throws DebridException
+     */
+    public function findFileByFilename(string $magnet, string $filename): ?DebridFile
+    {
+        // Check cache first - don't automatically add magnet
+        $cacheResult = $this->checkCache($magnet);
+        
+        if (!$cacheResult->isCached) {
+            return null;
+        }
+
+        // Get actual files
+        $files = $this->getCachedFiles($magnet);
+        $targetFilename = strtolower(basename($filename));
+        
+        foreach ($files as $file) {
+            $fileBasename = strtolower(basename($file->path));
+            if ($fileBasename === $targetFilename) {
+                return $file;
+            }
+        }
+        
+        return null;
     }
 }
