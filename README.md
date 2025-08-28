@@ -13,19 +13,27 @@ composer require rleroi/debrid
 ```php
 use RLeroi\Debrid\Client;
 
-// Choose your debrid service
+function getLink(Client $client, string $magnet): ?string
+{
+  // 1. add magnet
+  $client->addMagnet($magnet);
+
+  // 2. get all files
+  $files = $client->getCachedFiles($magnet);
+
+  if (!count($files)) {
+    return null;
+  }
+
+  // 3. get stream/download link for a specific file
+  return $client->getLink($magnet, $files[0]->path);
+}
+
 $client = (new Client())
     ->setClientPremiumize('your-token');
-
-// Add new torrent if not cached
-$torrentId = $client->addMagnet($magnet);
-
-// Check what files are available
 $magnet = 'magnet:?xt=urn:btih:34FF1FAE9661D72152FB1FC31E27C15297072654&dn=example+torrent';
-$files = $client->getCachedFiles($magnet);
 
-// Get download link for a specific file
-$downloadLink = $client->getLink($magnet, $files[0]->path);
+getLink($client, $magnet);
 ```
 
 ## Supported Services
