@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace RLeroi\Debrid\Mappers;
 
-use RLeroi\Debrid\DTOs\CacheCheckResult;
 use RLeroi\Debrid\DTOs\DebridFile;
 use RLeroi\Debrid\DTOs\DebridTorrent;
 
@@ -43,14 +42,14 @@ final class DebridLinkMapper implements MapperInterface
         }
 
         return DebridTorrent::fromArray([
-            'id' => $torrentData['torrent_id'] ?? '',
-            'hash' => $torrentData['hash'] ?? '',
-            'name' => $torrentData['name'] ?? '',
-            'status' => $torrentData['status'] ?? '',
-            'size' => $torrentData['size'] ?? 0,
-            'files' => $files,
-            'magnet' => $magnet,
-            'upload_date' => $torrentData['created_at'] ?? null,
+            'id'              => $torrentData['torrent_id'] ?? '',
+            'hash'            => $torrentData['hash'] ?? '',
+            'name'            => $torrentData['name'] ?? '',
+            'status'          => $torrentData['status'] ?? '',
+            'size'            => $torrentData['size'] ?? 0,
+            'files'           => $files,
+            'magnet'          => $magnet,
+            'upload_date'     => $torrentData['created_at'] ?? null,
             'completion_date' => $torrentData['completed_at'] ?? null,
         ]);
     }

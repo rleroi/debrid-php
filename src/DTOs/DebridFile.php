@@ -5,20 +5,19 @@ declare(strict_types=1);
 namespace RLeroi\Debrid\DTOs;
 
 /**
- * Represents a file from a debrid service
+ * Represents a file from a debrid service.
  */
 final class DebridFile
 {
     public function __construct(
         public string $path,
-        public int    $size,
-        public array  $data,
-    )
-    {
+        public int $size,
+        public array $data,
+    ) {
     }
 
     /**
-     * Get the filename without directory path
+     * Get the filename without directory path.
      */
     public function getFilename(): string
     {
@@ -26,7 +25,7 @@ final class DebridFile
     }
 
     /**
-     * Get the file extension
+     * Get the file extension.
      */
     public function getExtension(): string
     {
@@ -34,7 +33,7 @@ final class DebridFile
     }
 
     /**
-     * Get human-readable file size
+     * Get human-readable file size.
      */
     public function getFormattedSize(): string
     {
@@ -45,6 +44,6 @@ final class DebridFile
             $bytes /= 1024;
         }
 
-        return round($bytes, 2) . ' ' . $units[$i];
+        return round($bytes, 2).' '.$units[$i];
     }
 }

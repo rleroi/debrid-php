@@ -42,10 +42,10 @@ final class RealDebridClient implements ClientStrategy
 
         $mergedOptions = array_merge([
             'base_uri' => self::BASE_URL,
-            'headers' => [
-                'Authorization' => 'Bearer ' . $this->token,
-                'Accept' => 'application/json',
-            ]
+            'headers'  => [
+                'Authorization' => 'Bearer '.$this->token,
+                'Accept'        => 'application/json',
+            ],
         ], $options);
 
         $response = $this->http->request($method, $uri, $mergedOptions);
@@ -58,6 +58,7 @@ final class RealDebridClient implements ClientStrategy
             if ($response->getStatusCode() >= 400) {
                 throw new DebridException("HTTP {$response->getStatusCode()}: Empty response");
             }
+
             return [];
         }
 
@@ -68,7 +69,7 @@ final class RealDebridClient implements ClientStrategy
 
             // Throw specific exceptions based on error message
             if (strpos($error, 'Bad token') !== false || strpos($error, 'Unauthorized') !== false) {
-                throw new DebridException('Authentication failed: ' . $error);
+                throw new DebridException('Authentication failed: '.$error);
             }
 
             throw new DebridException($error);
@@ -78,10 +79,11 @@ final class RealDebridClient implements ClientStrategy
     }
 
     /**
-     * @return DebridFile[]
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
+     *
+     * @return DebridFile[]
      */
     public function getCachedFiles(string $magnet): array
     {
@@ -118,6 +120,7 @@ final class RealDebridClient implements ClientStrategy
                 return true;
             }
         }
+
         return false;
     }
 
@@ -143,7 +146,7 @@ final class RealDebridClient implements ClientStrategy
         }
 
         if ($torrentId === null) {
-            throw new DebridException("Torrent is not added. Please add it first using addMagnet().");
+            throw new DebridException('Torrent is not added. Please add it first using addMagnet().');
         }
 
         $torrentInfo = $this->request('GET', "torrents/info/{$torrentId}");
@@ -219,7 +222,7 @@ final class RealDebridClient implements ClientStrategy
             throw new DebridException('Failed to add magnet: No torrent ID returned');
         }
 
-        $this->request('POST', 'torrents/selectFiles/' . $response['id'], [
+        $this->request('POST', 'torrents/selectFiles/'.$response['id'], [
             'form_params' => [
                 'files' => 'all',
             ],
@@ -229,7 +232,7 @@ final class RealDebridClient implements ClientStrategy
     }
 
     /**
-     * Extract hash from magnet link
+     * Extract hash from magnet link.
      */
     private function extractHashFromMagnet(string $magnet): string
     {
@@ -241,7 +244,7 @@ final class RealDebridClient implements ClientStrategy
     }
 
     /**
-     * Find existing torrent by hash
+     * Find existing torrent by hash.
      */
     private function findExistingTorrentByHash(string $hash): ?string
     {

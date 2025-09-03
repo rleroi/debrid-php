@@ -14,7 +14,7 @@ final class PremiumizeMapper implements MapperInterface
             return [];
         }
 
-        return array_map(fn(array $file): DebridFile => $this->mapFile($file), $response['content']);
+        return array_map(fn (array $file): DebridFile => $this->mapFile($file), $response['content']);
     }
 
     public function mapFile(array $fileData): DebridFile
@@ -26,14 +26,14 @@ final class PremiumizeMapper implements MapperInterface
 
         return new DebridFile(
             path: $path,
-            size: (int)($fileData['size'] ?? 0),
+            size: (int) ($fileData['size'] ?? 0),
             data: $fileData,
         );
     }
 
     /**
      * Strip the root folder from the path to keep consistency with other clients
-     * So "SomeTorrent/file.mp4" becomes "file.mp4"
+     * So "SomeTorrent/file.mp4" becomes "file.mp4".
      */
     private function stripRootFolder(string $path): string
     {
@@ -41,6 +41,7 @@ final class PremiumizeMapper implements MapperInterface
         if (strpos($path, '/') !== false) {
             // Split by first slash and return everything after it
             $parts = explode('/', $path, 2);
+
             return $parts[1] ?? $path;
         }
 

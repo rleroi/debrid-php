@@ -26,8 +26,8 @@ final class AllDebridClient implements ClientStrategy
     {
         $this->httpClient = $httpClient ?? new Client([
             'base_uri' => self::API_BASE_URL,
-            'timeout' => 30,
-            'headers' => [
+            'timeout'  => 30,
+            'headers'  => [
                 'Accept' => 'application/json',
             ],
         ]);
@@ -49,10 +49,11 @@ final class AllDebridClient implements ClientStrategy
     }
 
     /**
-     * @return DebridFile[]
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
+     *
+     * @return DebridFile[]
      */
     public function getCachedFiles(string $magnet): array
     {
@@ -105,6 +106,7 @@ final class AllDebridClient implements ClientStrategy
                 if ($file->data['l'] ?? null) {
                     return $this->unrestrictLink($file->data['l']);
                 }
+
                 throw new DebridException('No download link available for the specified file');
             }
         }
@@ -113,7 +115,8 @@ final class AllDebridClient implements ClientStrategy
     }
 
     /**
-     * Unrestrict a AllDebrid link to get the final download URL
+     * Unrestrict a AllDebrid link to get the final download URL.
+     *
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
@@ -160,11 +163,11 @@ final class AllDebridClient implements ClientStrategy
             throw new DebridException('Failed to upload magnet: No magnet ID returned');
         }
 
-        return (string)$response['data']['magnets'][0]['id'];
+        return (string) $response['data']['magnets'][0]['id'];
     }
 
     /**
-     * Make HTTP request to AllDebrid API
+     * Make HTTP request to AllDebrid API.
      *
      * @throws GuzzleException
      * @throws JsonException
@@ -178,7 +181,7 @@ final class AllDebridClient implements ClientStrategy
 
         // Add authentication as query parameter (AllDebrid uses apikey, not Bearer token)
         $options['query'] = array_merge($options['query'] ?? [], [
-            'agent' => 'debridlib',
+            'agent'  => 'debridlib',
             'apikey' => $this->token,
         ]);
 
@@ -189,6 +192,7 @@ final class AllDebridClient implements ClientStrategy
             if ($response->getStatusCode() >= 400) {
                 throw new DebridException("HTTP {$response->getStatusCode()}: Empty response");
             }
+
             return [];
         }
 
@@ -208,24 +212,19 @@ final class AllDebridClient implements ClientStrategy
                 case 'AUTH_MISSING_APIKEY':
                 case 'AUTH_USER_BANNED':
                     throw new DebridException("Authentication failed ({$errorCode}): {$errorMessage}");
-
                 case 'LINK_PASS_PROTECTED':
                 case 'LINK_NOT_SUPPORTED':
                 case 'LINK_HOST_NOT_SUPPORTED':
                     throw new DebridException("Link not supported ({$errorCode}): {$errorMessage}");
-
                 case 'MAGNET_INVALID':
                 case 'MAGNET_TOO_MANY_FILES':
                     throw new DebridException("Invalid magnet ({$errorCode}): {$errorMessage}");
-
                 case 'MAGNET_NO_SERVER':
                 case 'MAGNET_PROCESSING':
                     throw new DebridException("Torrent not ready ({$errorCode}): {$errorMessage}");
-
                 case 'USER_LINK_INVALID':
                 case 'LINK_ERROR':
                     throw new DebridException("File error ({$errorCode}): {$errorMessage}");
-
                 default:
                     throw new DebridException("API Error ({$errorCode}): {$errorMessage}");
             }
@@ -235,7 +234,8 @@ final class AllDebridClient implements ClientStrategy
     }
 
     /**
-     * Extract hash from magnet link
+     * Extract hash from magnet link.
+     *
      * @throws DebridException
      */
     private function extractHashFromMagnet(string $magnet): string
@@ -248,7 +248,7 @@ final class AllDebridClient implements ClientStrategy
     }
 
     /**
-     * Find existing magnet by hash
+     * Find existing magnet by hash.
      */
     private function findExistingMagnetByHash(string $hash): ?string
     {
@@ -261,7 +261,7 @@ final class AllDebridClient implements ClientStrategy
 
         foreach ($magnets['data']['magnets'] as $magnet) {
             if (isset($magnet['hash']) && strtolower($magnet['hash']) === $hash) {
-                return (string)$magnet['id'];
+                return (string) $magnet['id'];
             }
         }
 

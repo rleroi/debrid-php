@@ -18,7 +18,7 @@ final class TorBoxMapper implements MapperInterface
         }
 
         $torrentData = $response['data'][$hash];
-        
+
         // Parse files
         $files = [];
         if (isset($torrentData['files'])) {
@@ -40,7 +40,7 @@ final class TorBoxMapper implements MapperInterface
     {
         // TorBox torrents/checkcached response format
         $files = [];
-        
+
         // Response can be either direct files array or nested under hash
         if (isset($response['files'])) {
             foreach ($response['files'] as $file) {
@@ -68,7 +68,7 @@ final class TorBoxMapper implements MapperInterface
         }
 
         $torrentData = $response['data'];
-        
+
         // Parse files
         $files = [];
         if (isset($torrentData['files'])) {
@@ -78,14 +78,14 @@ final class TorBoxMapper implements MapperInterface
         }
 
         return DebridTorrent::fromArray([
-            'id' => $torrentData['torrent_id'] ?? '',
-            'hash' => $torrentData['hash'] ?? '',
-            'name' => $torrentData['name'] ?? '',
-            'status' => $torrentData['status'] ?? '',
-            'size' => $torrentData['size'] ?? 0,
-            'files' => $files,
-            'magnet' => $magnet,
-            'upload_date' => $torrentData['created_at'] ?? null,
+            'id'              => $torrentData['torrent_id'] ?? '',
+            'hash'            => $torrentData['hash'] ?? '',
+            'name'            => $torrentData['name'] ?? '',
+            'status'          => $torrentData['status'] ?? '',
+            'size'            => $torrentData['size'] ?? 0,
+            'files'           => $files,
+            'magnet'          => $magnet,
+            'upload_date'     => $torrentData['created_at'] ?? null,
             'completion_date' => $torrentData['completed_at'] ?? null,
         ]);
     }

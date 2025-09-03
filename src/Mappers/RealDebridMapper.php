@@ -31,7 +31,7 @@ final class RealDebridMapper implements MapperInterface
 
         return new DebridFile(
             path: $path,
-            size: (int)($fileData['bytes'] ?? 0),
+            size: (int) ($fileData['bytes'] ?? 0),
             data: $fileData,
         );
     }

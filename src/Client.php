@@ -11,6 +11,7 @@ use RLeroi\Debrid\Clients\PremiumizeClient;
 use RLeroi\Debrid\Clients\RealDebridClient;
 use RLeroi\Debrid\DTOs\DebridFile;
 use RLeroi\Debrid\Exceptions\DebridException;
+
 //use RLeroi\Debrid\Clients\DebridLinkClient;
 //use RLeroi\Debrid\Clients\TorBoxClient;
 
@@ -93,11 +94,13 @@ final class Client
     }
 
     /**
-     * Get all cached files from a torrent
+     * Get all cached files from a torrent.
      *
      * @param string $magnet The magnet link
-     * @return DebridFile[] Array of cached files
+     *
      * @throws DebridException
+     *
+     * @return DebridFile[] Array of cached files
      */
     public function getCachedFiles(string $magnet): array
     {
@@ -107,12 +110,14 @@ final class Client
     }
 
     /**
-     * Check if a specific file is cached in a torrent
+     * Check if a specific file is cached in a torrent.
      *
      * @param string $magnet The magnet link
-     * @param string $path The file path
-     * @return bool True if file is cached
+     * @param string $path   The file path
+     *
      * @throws DebridException
+     *
+     * @return bool True if file is cached
      */
     public function isFileCached(string $magnet, string $path): bool
     {
@@ -122,11 +127,13 @@ final class Client
     }
 
     /**
-     * Add a magnet link to the debrid service
+     * Add a magnet link to the debrid service.
      *
      * @param string $magnet The magnet link
-     * @return string The torrent ID
+     *
      * @throws DebridException
+     *
+     * @return string The torrent ID
      */
     public function addMagnet(string $magnet): string
     {
@@ -136,12 +143,14 @@ final class Client
     }
 
     /**
-     * Get download link for a specific file
+     * Get download link for a specific file.
      *
      * @param string $magnet The magnet link
-     * @param string $path The file path
-     * @return string The download link
+     * @param string $path   The file path
+     *
      * @throws DebridException
+     *
+     * @return string The download link
      */
     public function getLink(string $magnet, string $path): string
     {

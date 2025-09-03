@@ -34,12 +34,12 @@ final class AllDebridMapper implements MapperInterface
 
     /**
      * todo test nested folders
-     * Map a file group that might contain nested entries
+     * Map a file group that might contain nested entries.
      */
     private function mapFileGroup(array $fileGroup): array
     {
         $files = [];
-        
+
         // Check if this is a nested structure with 'e' (entries) array
         if (isset($fileGroup['e']) && is_array($fileGroup['e'])) {
             // This is a nested structure, process each entry
@@ -50,7 +50,7 @@ final class AllDebridMapper implements MapperInterface
             // This is a simple file structure
             $files[] = $this->mapFile($fileGroup);
         }
-        
+
         return $files;
     }
 }

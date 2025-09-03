@@ -43,7 +43,7 @@ final class PremiumizeClient implements ClientStrategy
 
         $mergedOptions = array_merge_recursive([
             'base_uri' => self::BASE_URL,
-            'headers' => [
+            'headers'  => [
                 'Accept' => 'application/json',
             ],
             'query' => [
@@ -57,6 +57,7 @@ final class PremiumizeClient implements ClientStrategy
 
         if (!$data || (isset($data['status']) && $data['status'] === 'error')) {
             $message = $data['message'] ?? 'Unknown API error';
+
             throw new DebridException($message);
         }
 
@@ -64,10 +65,11 @@ final class PremiumizeClient implements ClientStrategy
     }
 
     /**
-     * @return DebridFile[]
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
+     *
+     * @return DebridFile[]
      */
     public function getCachedFiles(string $magnet): array
     {
@@ -131,7 +133,7 @@ final class PremiumizeClient implements ClientStrategy
             throw new DebridException('Failed to add magnet');
         }
 
-        return (string)$response['id'];
+        return (string) $response['id'];
     }
 
     /**
@@ -153,5 +155,4 @@ final class PremiumizeClient implements ClientStrategy
 
         return isset($response['response']) && $response['response'][0];
     }
-
 }
