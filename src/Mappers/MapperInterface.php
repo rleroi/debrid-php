@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace RLeroi\Debrid\Mappers;
 
-use RLeroi\Debrid\DTOs\CacheCheckResult;
-use RLeroi\Debrid\DTOs\DebridFile;
-use RLeroi\Debrid\DTOs\DebridTorrent;
+use RLeroi\Debrid\Dtos\CacheCheckResult;
+use RLeroi\Debrid\Dtos\DebridFileDto;
+use RLeroi\Debrid\Dtos\DebridTorrent;
 
 interface MapperInterface
 {
@@ -18,5 +18,5 @@ interface MapperInterface
     /**
      * Map single file from API response
      */
-    public function mapFile(array $fileData): DebridFile;
+    public function mapFile(array $fileData): DebridFileDto;
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RLeroi\Debrid\Mappers;
 
-use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Dtos\DebridFileDto;
 
 final class AllDebridMapper implements MapperInterface
 {
@@ -22,10 +22,10 @@ final class AllDebridMapper implements MapperInterface
         return $files;
     }
 
-    public function mapFile(array $fileData): DebridFile
+    public function mapFile(array $fileData): DebridFileDto
     {
         // AllDebrid file format: {'n': 'filename', 's': size, 'l': 'link'}
-        return new DebridFile(
+        return new DebridFileDto(
             path: $fileData['n'] ?? '',
             size: (int) ($fileData['s'] ?? 0),
             data: $fileData,

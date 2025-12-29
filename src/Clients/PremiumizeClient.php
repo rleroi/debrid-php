@@ -8,7 +8,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use JsonException;
-use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Dtos\DebridFileDto;
 use RLeroi\Debrid\Exceptions\DebridException;
 use RLeroi\Debrid\Mappers\PremiumizeMapper;
 use RuntimeException;
@@ -64,7 +64,7 @@ final class PremiumizeClient implements ClientStrategy
     }
 
     /**
-     * @return DebridFile[]
+     * @return DebridFileDto[]
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException

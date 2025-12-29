@@ -9,7 +9,7 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use InvalidArgumentException;
 use JsonException;
-use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Dtos\DebridFileDto;
 use RLeroi\Debrid\Exceptions\DebridException;
 use RLeroi\Debrid\Mappers\AllDebridMapper;
 use RuntimeException;
@@ -49,7 +49,7 @@ final class AllDebridClient implements ClientStrategy
     }
 
     /**
-     * @return DebridFile[]
+     * @return DebridFileDto[]
      * @throws GuzzleException
      * @throws JsonException
      * @throws DebridException
@@ -178,7 +178,6 @@ final class AllDebridClient implements ClientStrategy
 
         // Add authentication as query parameter (AllDebrid uses apikey, not Bearer token)
         $options['query'] = array_merge($options['query'] ?? [], [
-            'agent' => 'debridlib',
             'apikey' => $this->token,
         ]);
 

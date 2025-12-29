@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RLeroi\Debrid\Mappers;
 
-use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Dtos\DebridFileDto;
 
 final class RealDebridMapper implements MapperInterface
 {
@@ -23,13 +23,13 @@ final class RealDebridMapper implements MapperInterface
         return $files;
     }
 
-    public function mapFile(array $fileData): DebridFile
+    public function mapFile(array $fileData): DebridFileDto
     {
         // Real-Debrid file format: {'path': '/filename', 'bytes': size, 'id': id}
         $path = $fileData['path'] ?? '';
         $path = ltrim($path, '/'); // Remove leading slash for consistency
 
-        return new DebridFile(
+        return new DebridFileDto(
             path: $path,
             size: (int)($fileData['bytes'] ?? 0),
             data: $fileData,

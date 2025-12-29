@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RLeroi\Debrid\Mappers;
 
-use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Dtos\DebridFileDto;
 
 final class PremiumizeMapper implements MapperInterface
 {
@@ -14,17 +14,17 @@ final class PremiumizeMapper implements MapperInterface
             return [];
         }
 
-        return array_map(fn(array $file): DebridFile => $this->mapFile($file), $response['content']);
+        return array_map(fn(array $file): DebridFileDto => $this->mapFile($file), $response['content']);
     }
 
-    public function mapFile(array $fileData): DebridFile
+    public function mapFile(array $fileData): DebridFileDto
     {
         // Premiumize file format: {'path': 'filename', 'size': size}
         $rawPath = $fileData['path'] ?? '';
 
         $path = $this->stripRootFolder($rawPath);
 
-        return new DebridFile(
+        return new DebridFileDto(
             path: $path,
             size: (int)($fileData['size'] ?? 0),
             data: $fileData,

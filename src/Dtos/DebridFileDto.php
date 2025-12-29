@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace RLeroi\Debrid\DTOs;
+namespace RLeroi\Debrid\Dtos;
 
 /**
  * Represents a file from a debrid service
  */
-final class DebridFile
+final class DebridFileDto
 {
     public function __construct(
         public string $path,

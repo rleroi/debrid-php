@@ -15,8 +15,10 @@ use RLeroi\Debrid\Client;
 
 function getLink(Client $client, string $magnet): ?string
 {
-  // 1. add magnet
-  $client->addMagnet($magnet);
+  // 1 add magnet (required for RealDebrid)
+  if ($client instanceof RLeroi\Debrid\Clients\RealDebridClient) {
+    $client->addMagnet($magnet);
+  }
 
   // 2. get all files
   $files = $client->getCachedFiles($magnet);
@@ -48,8 +50,8 @@ $client->setClientAllDebrid('token');
 // Premiumize
 $client->setClientPremiumize('token');
 
-// TorBox (TODO)
-// $client->setClientTorBox('token');
+// TorBox
+$client->setClientTorBox('token');
 
 // DebridLink (TODO)
 //$client->setClientDebridLink('token');

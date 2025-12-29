@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RLeroi\Debrid\Clients;
 
 use GuzzleHttp\ClientInterface;
-use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Dtos\DebridFileDto;
 
 interface ClientStrategy
 {
@@ -17,7 +17,7 @@ interface ClientStrategy
      * Get list of cached files for a magnet link
      *
      * @param string $magnet The magnet link
-     * @return DebridFile[] Array of file objects
+     * @return DebridFileDto[] Array of file objects
      * @throws \RLeroi\Debrid\Exceptions\DebridException
      */
     public function getCachedFiles(string $magnet): array;

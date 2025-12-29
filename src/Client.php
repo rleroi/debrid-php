@@ -9,7 +9,8 @@ use RLeroi\Debrid\Clients\AllDebridClient;
 use RLeroi\Debrid\Clients\ClientStrategy;
 use RLeroi\Debrid\Clients\PremiumizeClient;
 use RLeroi\Debrid\Clients\RealDebridClient;
-use RLeroi\Debrid\DTOs\DebridFile;
+use RLeroi\Debrid\Clients\TorBoxClient;
+use RLeroi\Debrid\Dtos\DebridFileDto;
 use RLeroi\Debrid\Exceptions\DebridException;
 //use RLeroi\Debrid\Clients\DebridLinkClient;
 //use RLeroi\Debrid\Clients\TorBoxClient;
@@ -41,7 +42,7 @@ final class Client
         return $this;
     }
 
-    /*public function setClientTorBox(?string $token = null): self
+    public function setClientTorBox(?string $token = null): self
     {
         if ($token) {
             $this->setToken($token);
@@ -50,7 +51,7 @@ final class Client
         $this->client = new TorBoxClient($this->token);
 
         return $this;
-    }*/
+    }
 
     public function setClientAllDebrid(?string $token = null): self
     {
@@ -96,7 +97,7 @@ final class Client
      * Get all cached files from a torrent
      *
      * @param string $magnet The magnet link
-     * @return DebridFile[] Array of cached files
+     * @return DebridFileDto[] Array of cached files
      * @throws DebridException
      */
     public function getCachedFiles(string $magnet): array

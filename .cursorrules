@@ -16,4 +16,4 @@
     - Suggest applicable design patterns common in Laravel/PHP, linking to [refactoring.guru](https://refactoring.guru/design-patterns).
     - Use modern PHP 8 features where beneficial
     - Favor expressive, declarative code over imperative.
-    - Use **short functions** (`fn() =>`) where appropriate for simple logic.
+    - Use **short functions** (`fn(): T =>`) where appropriate for simple logic.

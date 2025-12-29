@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace RLeroi\Debrid\Mappers;
 
-use RLeroi\Debrid\DTOs\CacheCheckResult;
-use RLeroi\Debrid\DTOs\DebridFile;
-use RLeroi\Debrid\DTOs\DebridTorrent;
+use RLeroi\Debrid\Dtos\CacheCheckResult;
+use RLeroi\Debrid\Dtos\DebridFileDto;
+use RLeroi\Debrid\Dtos\DebridTorrent;
 
 final class DebridLinkMapper implements MapperInterface
 {
@@ -55,10 +55,10 @@ final class DebridLinkMapper implements MapperInterface
         ]);
     }
 
-    public function mapFile(array $fileData): DebridFile
+    public function mapFile(array $fileData): DebridFileDto
     {
         // DebridLink file format: {'path': 'filename', 'size': size, 'id': id}
-        return new DebridFile(
+        return new DebridFileDto(
             path: $fileData['path'] ?? '',
             size: (int) ($fileData['size'] ?? 0),
             id: $fileData['id'] ?? null,
