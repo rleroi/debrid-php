@@ -19,6 +19,11 @@ final class TorBoxClient implements ClientStrategy
 {
     private const API_BASE_URL = 'https://api.torbox.app';
 
+    /** After createtorrent, mylist/file rows can lag briefly behind; retry lookups before failing. */
+    private const MYLIST_LOOKUP_ATTEMPTS = 2;
+
+    private const MYLIST_LOOKUP_DELAY_MICROS = 100_000; // 400ms
+
     private ?string $token = null;
     private ClientInterface $httpClient;
     private TorBoxMapper $mapper;
@@ -116,28 +121,43 @@ final class TorBoxClient implements ClientStrategy
             throw new DebridException('Failed to create torrent, maybe torrent is not cached?');
         }
 
-        // get file id from the torrent info
-        $response = $this->request(
-            'GET',
-            '/v1/api/torrents/mylist',
-            [
-                'bypass_cache' => true,
-                'id' => $torrentId,
-                'limit' => 1,
-            ],
-        );
-
-        $files = $this->mapper->mapFiles($response);
+        // get file id from the torrent info (sometimes not populated immediately after createtorrent)
         $fileId = null;
-        // Find the file that matches the requested path
-        foreach ($files as $file) {
-            if ($file->path === $path) {
-                $fileId = $file->data['id'] ?? 0;
-                break;
+        for ($attempt = 1; $attempt <= self::MYLIST_LOOKUP_ATTEMPTS; $attempt++) {
+            $response = $this->request(
+                'GET',
+                '/v1/api/torrents/mylist',
+                [
+                    'query' => [
+                        'bypass_cache' => 'true',
+                        'id' => $torrentId,
+                        'limit' => 1,
+                    ],
+                ],
+            );
+
+            $files = $this->mapper->mapFiles($response);
+            foreach ($files as $file) {
+                if ($file->path !== $path) {
+                    continue;
+                }
+                $candidate = $file->data['id'] ?? null;
+                if ($candidate === null || $candidate === '') {
+                    break;
+                }
+                if (is_numeric((string) $candidate)) {
+                    $fileId = $candidate;
+
+                    break 2;
+                }
+            }
+
+            if ($attempt < self::MYLIST_LOOKUP_ATTEMPTS) {
+                usleep(self::MYLIST_LOOKUP_DELAY_MICROS);
             }
         }
 
-        if (is_null($fileId)) {
+        if ($fileId === null) {
             throw new DebridException("File with path '{$path}' not found in magnet");
         }
 

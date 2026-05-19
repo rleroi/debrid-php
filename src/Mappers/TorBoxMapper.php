@@ -4,28 +4,63 @@ declare(strict_types=1);
 
 namespace RLeroi\Debrid\Mappers;
 
-use RLeroi\Debrid\Dtos\CacheCheckResult;
 use RLeroi\Debrid\Dtos\DebridFileDto;
-use RLeroi\Debrid\Dtos\DebridTorrent;
 
 final class TorBoxMapper implements MapperInterface
 {
     public function mapFiles(array $response): array
     {
-
         $files = [];
+        $data = $response['data'] ?? null;
+        if (!is_array($data) || $data === []) {
+            return [];
+        }
 
-       if (isset($response['data'])) {
-            foreach ($response['data'] as $torrentData) {
-                if (isset($torrentData['files'])) {
-                    foreach ($torrentData['files'] as $file) {
-                        $files[] = $this->mapFile($file);
-                    }
+        foreach ($this->torrentRows($data) as $torrentRow) {
+            if (!isset($torrentRow['files']) || !is_array($torrentRow['files'])) {
+                continue;
+            }
+
+            foreach ($torrentRow['files'] as $file) {
+                if (is_array($file)) {
+                    $files[] = $this->mapFile($file);
                 }
             }
         }
 
         return $files;
+    }
+
+    /**
+     * TorBox wraps torrents differently per endpoint:
+     * - checkcached / mylist (no id) often returns a list or hash => torrent.
+     * - GET mylist?id=… returns a single torrent object in `data` (not a list).
+     *
+     * @return iterable<int, array<string, mixed>>
+     */
+    private function torrentRows(array $data): iterable
+    {
+        if (array_is_list($data)) {
+            foreach ($data as $torrentRow) {
+                if (is_array($torrentRow)) {
+                    yield $torrentRow;
+                }
+            }
+
+            return;
+        }
+
+        if (isset($data['files']) && is_array($data['files'])) {
+            yield $data;
+
+            return;
+        }
+
+        foreach ($data as $torrentRow) {
+            if (is_array($torrentRow)) {
+                yield $torrentRow;
+            }
+        }
     }
 
     public function mapFile(array $fileData): DebridFileDto
